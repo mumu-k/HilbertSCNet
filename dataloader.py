@@ -17,20 +17,17 @@ from PIL  import Image
 
 Batch_Size = 4
 Input_Size = (512,512)
-# from train import Batch_Size,Input_Size
-#transform 是对图像进行预处理、数据增强。compose将多个处理步骤整合到一起
-#ToTensor:将原始取值0-255像素值，归一化伪0-1
-#Normalize：用像素值的均值和标准偏差对像素值进行标准化
+
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485,0.465,0.406],std=[0.229,0.224,0.225])
 ])
 
-#主要采用N 位寄存器对N个状态进行编码，每个状态都有它独立的寄存器位，并且再任意时候只有一位有效。
-# 此编码是分类变量作为二进制向量的表示。这首先要求分类值映射到整数值，然后每个整数值被表示成二进制向量
+# The N-bit registers are used to encode the N states, each state has its own register bit and only one bit is valid at any given time.
+# This encoding is a representation of the categorical variables as binary vectors. This first requires the categorical values to be mapped to integer values, and then each integer value is represented as a binary vector
 def onehot(data,n):
     buf = np.zeros(data.shape+(n,))
-    nmsk = np.arange(data.size)*n+data.ravel()#ravel将多维数组降为一维，且降维后可以改变原变量的值
+    nmsk = np.arange(data.size)*n+data.ravel()#ravel reduces multi-dimensional arrays to one dimension and can change the value of the original variable after reduction
     buf.ravel()[nmsk-1]=1
     return buf
 
@@ -39,8 +36,7 @@ class BagDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(os.listdir('./dataset/aeroscapes/aeroscapes/JPEGImages'))   #地址
-        # return len(os.listdir('./dataset/bulid/src1'))   #地址
+        return len(os.listdir('./dataset/aeroscapes/aeroscapes/JPEGImages'))   #Address of the dataset
 
     def get_rand_data(self,image,label):
         flip = rand()<.5
@@ -60,36 +56,31 @@ class BagDataset(Dataset):
         return image,label
 
     def __getitem__(self, idx):
-        #读取原图
+        #imgA-original figure，imgB-mask
         imgA_name = os.listdir('./dataset/aeroscapes/aeroscapes/JPEGImages')[idx]
-        # imgA_name = os.listdir('./dataset/bulid/src1')[idx]
         imgB_name = os.listdir('./dataset/aeroscapes/aeroscapes/SegmentationClass')[idx]
-        # imgB_name = os.listdir('./dataset/bulid/gt1')[idx]
+        
+        #Read original image
         imgA = cv2.imread('./dataset/aeroscapes/aeroscapes/JPEGImages/'+imgA_name)
-        # imgA = cv2.imread('./dataset/bulid/src1/'+imgA_name)
         imgA = cv2.resize(imgA,Input_Size)
 
-        #读取标签图
+        #Read masks
         imgB =cv2.imread('./dataset/aeroscapes/aeroscapes/SegmentationClass/'+imgB_name)
-        # imgB =cv2.imread('./dataset/bulid/gt1/'+imgB_name)
         imgB = cv2.resize(imgB, Input_Size)
-
-        # imgA,imgB = self.get_rand_data(imgA,imgB)#用于数据增强
-
 
         label = imgB[:,:,0]
         imgB = label
 
 
         if self.transform:
-            imgA = self.transform(imgA)#一转成向量后，imgA通道就变成（C,H,W）
+            imgA = self.transform(imgA)
         return imgA,imgB
 
 bag = BagDataset(transform)
 train_size = int(0.9*len(bag))
 test_size = len(bag)-train_size
 
-train_dataset,test_dataset = random_split(bag,[train_size,test_size])#按照上述比例（9：1）划分训练集和测试集
+train_dataset,test_dataset = random_split(bag,[train_size,test_size])
 train_dataloader = DataLoader(train_dataset,batch_size=Batch_Size,shuffle=True,num_workers=0,drop_last=True)
 test_dataloader = DataLoader(test_dataset,batch_size=Batch_Size,shuffle=True,num_workers=0,drop_last=True)
 
