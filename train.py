@@ -11,16 +11,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from dataloader import test_dataloader,train_dataloader,train_size,test_size,Batch_Size,Input_Size
-from Net.FCN import FCNs,VGGNet
-from Net.pspnet import PSPNet
-from Net.my_unet import My_Unet
-from Net.unet_model import UNet
 from Net.efficient_new import efficientNet
 from Net.efficientv2_new import efficient_v2
-from Net.viewAL.deeplab import DeepLab
-from Net.ocnet.network.resnet101_pyramid_oc import get_resnet50_pyramid_oc_dsn as ocnet
-from Net.Refinenet import RefineNet
-from Net.hyperseg.utils.obj_factory import obj_factory
 from IoU import IOUMetric
 import pandas as pd
 from tqdm import tqdm
@@ -36,12 +28,11 @@ epoch = 30
 def train(epo_num=50,show_vgg_params=False):
 
     efficient = efficient_v2(num_classes,pretrained=True)
-
-    #将模型加载到设备上
-
     net = efficient.to(device)
+    
     optimizer = optim.Adam(net.parameters(),lr=1e-4)
     lr_scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.95)
+    
     Train_Loss = []
     Test_Loss = []
     miou = []
@@ -81,16 +72,13 @@ def train(epo_num=50,show_vgg_params=False):
                     optimizer.zero_grad()
                     output = net(img)
                     loss = CE_Loss(output,mask.long(),num_classes=num_classes)
-                    iter_loss = loss.item()     #item得到一个元素张量里面的元素值，一般用于返回loss,acc
+                    iter_loss = loss.item()     
                     test_loss += iter_loss
 
-                    #评价指标
                     output = torch.softmax(output,dim=1)
                     output_np = output.cpu().numpy().copy()
                     output_np = np.argmax(output_np,axis = 1)
-
                     mask_np = mask.cpu().numpy().copy()
-
 
                     _,test_Acc,Class_IoU,test_MIoU,_ = IOUMetric.evaluate(IOU,output_np,mask_np)
                     iter_test_Acc = test_Acc.item()
