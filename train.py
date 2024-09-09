@@ -22,7 +22,6 @@ device = torch.device('cuda:0'if torch.cuda.is_available() else 'cpu')
 num_classes = 2
 IOU = IOUMetric(num_classes)
 epoch = 30
-# alpha =1
 
 
 def train(epo_num=50,show_vgg_params=False):
